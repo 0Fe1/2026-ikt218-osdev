@@ -57,12 +57,19 @@ set(CMAKE_ASM_NASM_COMPILE_OBJECT
 set(OS_KERNEL_LINKER "${CMAKE_CURRENT_SOURCE_DIR}/src/arch/${OS_ARCH_TARGET}/linker.ld")
 
 # Add executable target for the kernel
-# Assignment 2: multiboot2 boot stub + kernel main + GDT + terminal + tiny libc
+# Assignment 3: GDT + IDT + ISRs (32) + IRQs (16) + keyboard driver
 add_executable(uiaos-kernel
     src/multiboot2.asm
     src/kernel.c
     src/lib/gdt.c
     src/lib/gdt.asm
+    src/lib/idt.c
+    src/lib/idt.asm
+    src/lib/isr.c
+    src/lib/isr.asm
+    src/lib/irq.c
+    src/lib/irq.asm
+    src/lib/keyboard.c
     src/lib/terminal.c
     src/libc/stdio.c
     src/libc/string.c

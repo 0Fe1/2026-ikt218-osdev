@@ -1,35 +1,60 @@
 /*
- * kernel.c - Kernel entry point for Assignment 2
+ * kernel.c - Kernel entry point
  *
- * Called from multiboot2.asm after Limine bootloader hands over control.
- * Sets up the GDT, initializes the VGA text terminal, and prints "Hello World".
+ * Assignment 2 added the GDT and the VGA terminal.
+ * Assignment 3 adds the IDT, ISRs, IRQs (with PIC remapping) and a
+ * PS/2 keyboard driver.
+ *
+ * Boot flow:
+ *   1. Clear the screen.
+ *   2. Install our own GDT (so segment registers are under our control).
+ *   3. Install the IDT and the 32 CPU exception stubs.
+ *   4. Remap the PICs and register the 16 IRQ stubs.
+ *   5. Register the keyboard handler on IRQ1.
+ *   6. Trigger three software interrupts to demonstrate ISR dispatch.
+ *   7. Enable interrupts (sti) and idle on hlt while keyboard input
+ *      arrives via IRQ1.
  */
 
 #include <libc/stdint.h>
 #include <libc/stdio.h>
 #include <gdt.h>
+#include <idt.h>
+#include <irq.h>
+#include <keyboard.h>
 #include <terminal.h>
 
 void main(uint32_t mb_magic, uint32_t mb_info_addr) {
-    /* mb_magic and mb_info_addr come from the Multiboot2 bootloader.
-       We don't use them yet, but mark them as used so the compiler stays quiet. */
     (void)mb_magic;
     (void)mb_info_addr;
 
-    /* Clear the screen and move the cursor to the top-left. */
     terminal_initialize();
 
-    /* Install our own Global Descriptor Table.
-       After this returns, the CPU is using OUR segment descriptors,
-       not the ones Limine set up. */
+    printf("UiAOS booting...\n");
+
     gdt_install();
+    printf("[init] GDT installed.\n");
 
-    /* Print Hello World using our printf implementation. */
-    printf("Hello World!\n");
-    printf("GDT installed with %d entries (NULL, Code, Data).\n", 3);
+    idt_install();
+    printf("[init] IDT installed (32 ISRs registered).\n");
 
-    /* Halt the CPU forever. We don't have interrupts or a scheduler yet. */
-    while (1) {
+    irq_install();
+    printf("[init] PICs remapped, 16 IRQs registered.\n");
+
+    keyboard_install();
+    printf("[init] Keyboard handler attached to IRQ1.\n");
+
+    /* Demonstrate ISR dispatch by triggering three software interrupts. */
+    printf("\nTriggering three software interrupts:\n");
+    __asm__ volatile ("int $0x0");      /* Division by zero */
+    __asm__ volatile ("int $0x3");      /* Breakpoint */
+    __asm__ volatile ("int $0x6");      /* Invalid opcode */
+
+    /* Enable hardware interrupts and start accepting keyboard input. */
+    __asm__ volatile ("sti");
+    printf("\nInterrupts enabled. Type something on the keyboard:\n> ");
+
+    for (;;) {
         __asm__ volatile ("hlt");
     }
 }

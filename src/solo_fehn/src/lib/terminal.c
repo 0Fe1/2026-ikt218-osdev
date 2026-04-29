@@ -1,9 +1,8 @@
 /*
  * terminal.c - VGA text-mode terminal
  *
- * Writes characters into the 80x25 framebuffer at 0xB8000. Tracks the
- * current cursor position and scrolls the buffer up when the bottom is
- * reached.
+ * Updated for Assignment 3 to also handle the backspace character so the
+ * keyboard's backspace key actually erases the previous character.
  */
 
 #include <terminal.h>
@@ -12,10 +11,7 @@
 #define VGA_WIDTH   80
 #define VGA_HEIGHT  25
 
-/* Attribute byte: low nibble = foreground, high nibble = background.
-   Here: white-on-black (0x0F). The shift by 8 places the attribute byte
-   in the high half of each 16-bit cell. */
-#define VGA_DEFAULT_COLOUR  ((uint16_t)0x0F << 8)
+#define VGA_DEFAULT_COLOUR  ((uint16_t)0x0F << 8)   /* white on black */
 
 static volatile uint16_t* const vga_buffer = (volatile uint16_t*)0xB8000;
 
@@ -37,13 +33,11 @@ void terminal_initialize(void) {
 }
 
 static void terminal_scroll(void) {
-    /* Move every line one step up. */
     for (size_t y = 1; y < VGA_HEIGHT; y++) {
         for (size_t x = 0; x < VGA_WIDTH; x++) {
             vga_buffer[(y - 1) * VGA_WIDTH + x] = vga_buffer[y * VGA_WIDTH + x];
         }
     }
-    /* Blank the new bottom line. */
     for (size_t x = 0; x < VGA_WIDTH; x++) {
         put_at(VGA_HEIGHT - 1, x, ' ');
     }
@@ -57,8 +51,16 @@ void terminal_putchar(char c) {
     } else if (c == '\r') {
         cursor_col = 0;
     } else if (c == '\t') {
-        /* round up to next multiple of 8 */
         cursor_col = (cursor_col + 8) & ~(size_t)7;
+    } else if (c == '\b') {
+        if (cursor_col > 0) {
+            cursor_col--;
+            put_at(cursor_row, cursor_col, ' ');
+        } else if (cursor_row > 0) {
+            cursor_row--;
+            cursor_col = VGA_WIDTH - 1;
+            put_at(cursor_row, cursor_col, ' ');
+        }
     } else {
         put_at(cursor_row, cursor_col, c);
         cursor_col++;
