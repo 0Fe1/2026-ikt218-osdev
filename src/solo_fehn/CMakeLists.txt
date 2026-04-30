@@ -57,7 +57,7 @@ set(CMAKE_ASM_NASM_COMPILE_OBJECT
 set(OS_KERNEL_LINKER "${CMAKE_CURRENT_SOURCE_DIR}/src/arch/${OS_ARCH_TARGET}/linker.ld")
 
 # Add executable target for the kernel
-# Assignment 3: GDT + IDT + ISRs (32) + IRQs (16) + keyboard driver
+# Assignment 4: GDT + IDT + IRQs + keyboard + memory + paging + PIT
 add_executable(uiaos-kernel
     src/multiboot2.asm
     src/kernel.c
@@ -71,6 +71,10 @@ add_executable(uiaos-kernel
     src/lib/irq.asm
     src/lib/keyboard.c
     src/lib/terminal.c
+    src/lib/memory.c
+    src/lib/paging.c
+    src/lib/pit.c
+    src/lib/cpp_support.cpp
     src/libc/stdio.c
     src/libc/string.c
 )
@@ -82,7 +86,7 @@ target_include_directories(uiaos-kernel PUBLIC include)
 # Specify compile options for C and C++
 target_compile_options(uiaos-kernel PRIVATE
     $<$<COMPILE_LANGUAGE:C>:-Wall -Wextra -nostdinc -nostdlib -fno-builtin -fno-stack-protector -fno-stack-check -fno-lto -fPIE -m32 -march=i386 -mno-mmx -mno-sse -mno-sse2 -mno-red-zone -Wno-main -g>
-    $<$<COMPILE_LANGUAGE:CXX>:-Wall -Wextra -nostdinc -nostdlib -fno-builtin -fno-stack-protector -fno-stack-check -fno-lto -fPIE -m32 -march=i386 -mno-mmx -mno-sse -mno-sse2 -mno-red-zone -g>
+    $<$<COMPILE_LANGUAGE:CXX>:-Wall -Wextra -nostdinc -nostdlib -fno-builtin -fno-stack-protector -fno-stack-check -fno-lto -fno-exceptions -fno-rtti -fPIE -m32 -march=i386 -mno-mmx -mno-sse -mno-sse2 -mno-red-zone -g>
     $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:-m32 -march=i386 -Wno-unused-variable -Wno-unused-parameter>
 )
 
