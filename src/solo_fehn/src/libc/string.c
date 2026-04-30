@@ -1,8 +1,5 @@
 /*
  * string.c - tiny libc string helpers
- *
- * For now we only need strlen. We will grow this file as later
- * assignments demand more.
  */
 
 #include <libc/string.h>
@@ -13,4 +10,12 @@ size_t strlen(const char* str) {
         len++;
     }
     return len;
+}
+
+int strcmp(const char* a, const char* b) {
+    while (*a && *a == *b) {
+        a++;
+        b++;
+    }
+    return (int)(unsigned char)*a - (int)(unsigned char)*b;
 }

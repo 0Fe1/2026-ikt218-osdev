@@ -1,7 +1,6 @@
 ########################################
 # The University of Agder Operating System: UiAOS
 # Languages: C, C++, and NASM Assembly
-# Tip: Use Ctrl+Shift+P in Visual Studio Code to get started with CMake.
 ########################################
 
 set(CMAKE_C_COMPILER_WORKS 1)
@@ -36,7 +35,7 @@ set(CMAKE_ASM_NASM_COMPILE_OBJECT
 
 set(OS_KERNEL_LINKER "${CMAKE_CURRENT_SOURCE_DIR}/src/arch/${OS_ARCH_TARGET}/linker.ld")
 
-# Assignment 5: GDT + IDT + IRQs + keyboard + memory + paging + PIT + music
+# Assignment 6: full kernel + interactive shell with RTC clock and command dispatch
 add_executable(uiaos-kernel
     src/multiboot2.asm
     src/kernel.c
@@ -55,6 +54,8 @@ add_executable(uiaos-kernel
     src/lib/pit.c
     src/lib/song_player.c
     src/lib/songs.c
+    src/lib/rtc.c
+    src/lib/shell.c
     src/lib/cpp_support.cpp
     src/libc/stdio.c
     src/libc/string.c
