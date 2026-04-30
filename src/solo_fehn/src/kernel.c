@@ -1,17 +1,9 @@
 /*
  * kernel.c - Kernel entry point
  *
- * Assignment 4 adds memory management, paging, and the PIT-based sleep
- * functions.  Boot flow now:
- *
- *   1. Clear the screen (terminal).
- *   2. Install GDT, IDT, IRQs, keyboard.
- *   3. Initialise the kernel heap (init_kernel_memory).
- *   4. Enable paging (init_paging).
- *   5. Print the memory layout.
- *   6. Initialise the PIT (so sleep_* and IRQ0 work).
- *   7. Demonstrate malloc and the sleep functions.
- *   8. Idle on hlt while the keyboard handler picks up keystrokes.
+ * Assignment 5 adds the music player on top of all earlier subsystems.
+ * Boot flow:
+ *   GDT -> IDT -> IRQs -> keyboard -> heap -> paging -> PIT -> music demo.
  */
 
 #include <libc/stdint.h>
@@ -24,6 +16,7 @@
 #include <memory.h>
 #include <paging.h>
 #include <pit.h>
+#include <song.h>
 
 void main(uint32_t mb_magic, uint32_t mb_info_addr) {
     (void)mb_magic;
@@ -34,49 +27,42 @@ void main(uint32_t mb_magic, uint32_t mb_info_addr) {
     printf("UiAOS booting...\n");
 
     gdt_install();
-    printf("[init] GDT installed.\n");
-
     idt_install();
-    printf("[init] IDT installed (32 ISRs registered).\n");
-
     irq_install();
-    printf("[init] PICs remapped, 16 IRQs registered.\n");
-
     keyboard_install();
-    printf("[init] Keyboard handler attached to IRQ1.\n");
-
-    /* --- Assignment 4: memory and paging --- */
     init_kernel_memory(&end);
     init_paging();
-    printf("[init] Paging enabled (identity-mapped first 4 MiB).\n");
-    print_memory_layout();
-
-    /* Demonstrate the kernel heap. */
-    void* a = malloc(12345);
-    void* b = malloc(54321);
-    void* c = malloc(13331);
-    printf("[mem] malloc(12345) = 0x%x\n", (unsigned int)a);
-    printf("[mem] malloc(54321) = 0x%x\n", (unsigned int)b);
-    printf("[mem] malloc(13331) = 0x%x\n", (unsigned int)c);
-    print_memory_layout();
-
-    /* --- Assignment 4: PIT --- */
     init_pit();
-    printf("[init] PIT running at %d Hz.\n", (int)TARGET_FREQUENCY);
 
-    /* Demonstrate sleep functions. */
-    int counter = 0;
-    for (int n = 0; n < 2; n++) {
-        printf("[%d]: Sleeping with busy-waiting (HIGH CPU).\n", counter);
-        sleep_busy(1000);
-        printf("[%d]: Slept using busy-waiting.\n", counter++);
+    printf("[init] All subsystems online (GDT, IDT, IRQ, keyboard, heap, paging, PIT).\n\n");
 
-        printf("[%d]: Sleeping with interrupts (LOW CPU).\n", counter);
-        sleep_interrupt(1000);
-        printf("[%d]: Slept using interrupts.\n", counter++);
+    /* --- Assignment 5: music player --- */
+    Song songs[] = {
+        { music_1, music_1_length },
+    };
+    uint32_t n_songs = sizeof(songs) / sizeof(Song);
+
+    SongPlayer* player = create_song_player();
+    printf("[music] Player created at 0x%x\n", (unsigned int)player);
+
+    /* Play each song twice, then drop into the keyboard prompt. The
+       assignment example uses while(1); we use a small finite count so
+       the demo finishes in reasonable time and the kernel goes idle
+       afterwards. */
+    for (int round = 0; round < 2; round++) {
+        for (uint32_t i = 0; i < n_songs; i++) {
+            printf("\nPlaying song %d (round %d)...\n", (int)(i + 1), round + 1);
+            player->play_song(&songs[i]);
+            printf("Finished playing the song.\n");
+            sleep_interrupt(500);
+        }
     }
 
-    printf("\nInterrupts enabled. Type something on the keyboard:\n> ");
+    /* Tidy up. */
+    free(player);
+
+    __asm__ volatile ("sti");
+    printf("\nMusic demo complete. Type something on the keyboard:\n> ");
 
     for (;;) {
         __asm__ volatile ("hlt");
